@@ -156,14 +156,6 @@ public class Cover implements IXposedHookLoadPackage {
             }
         });
 
-        // hook TelephonyManager getAllCellInfo
-        XposedHelpers.findAndHookMethod("android.telephony.TelephonyManager", mLpp.classLoader, "getAllCellInfo", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                param.setResult(getCell(mcc, 0, lac, cid, 0, TelephonyManager.PHONE_TYPE_GSM));
-                XposedBridge.log("TOM hook TelephonyManager getAllCellInfo method after");
-            }
-        });
 
         // hook getPhoneCount
         XposedHelpers.findAndHookMethod("android.telephony.TelephonyManager", mLpp.classLoader, "getPhoneCount", new XC_MethodHook() {
@@ -198,6 +190,27 @@ public class Cover implements IXposedHookLoadPackage {
         /**
          * android.location.LocationManager
          */
+
+        // hook addGpsStatusListener
+        XposedHelpers.findAndHookMethod(LocationManager.class, "addGpsStatusListener", GpsStatus.Listener.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                XposedBridge.log("TOM hook LocationManager addGpsStatusListener method before");
+                if (param.args[0] != null) {
+                    XposedHelpers.callMethod(param.args[0], "onGpsStatusChanged", 1);
+                    XposedHelpers.callMethod(param.args[0], "onGpsStatusChanged", 3);
+                }
+            }
+        });
+
+        // hook addNmeaListener
+        XposedHelpers.findAndHookMethod(LocationManager.class, "addNmeaListener", GpsStatus.NmeaListener.class, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                XposedBridge.log("TOM hook LocationManager addNmeaListener method before");
+                param.setResult(false);
+            }
+        });
 
         // hook getBestProvider
         XposedHelpers.findAndHookMethod("android.location.LocationManager", mLpp.classLoader, "getBestProvider", Criteria.class, boolean.class, new XC_MethodHook() {
@@ -266,6 +279,8 @@ public class Cover implements IXposedHookLoadPackage {
 
                     }
                 };
+
+                originalLocationListener.onLocationChanged(getLocation());
             }
         });
     }
