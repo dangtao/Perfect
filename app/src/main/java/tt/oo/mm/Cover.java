@@ -51,8 +51,8 @@ public class Cover implements IXposedHookLoadPackage {
 //    int mcc = 460;
 
     // 北京
-    double latitude = 39.985298;
-    double longitude = 116.32082;
+    double latitude = 31.7001297880;//39.985298;
+    double longitude = 110.6295618490;//116.32082;
     int lac = 4566;
     int cid = 17952525;
     int mcc = 460;
@@ -142,7 +142,7 @@ public class Cover implements IXposedHookLoadPackage {
         XposedHelpers.findAndHookMethod("android.telephony.TelephonyManager", mLpp.classLoader, "getCellLocation", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                param.setResult(getCellLocation());
+                param.setResult(null);
                 XposedBridge.log("TOM hook TelephonyManager getCellLocation method after");
             }
         });
@@ -151,7 +151,7 @@ public class Cover implements IXposedHookLoadPackage {
         XposedHelpers.findAndHookMethod("android.telephony.TelephonyManager", mLpp.classLoader, "getAllCellInfo", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                param.setResult(getCell(mcc, 0, lac, cid, 0, TelephonyManager.PHONE_TYPE_GSM));
+                param.setResult(null);
                 XposedBridge.log("TOM hook TelephonyManager getAllCellInfo method after");
             }
         });
@@ -173,7 +173,7 @@ public class Cover implements IXposedHookLoadPackage {
         XposedHelpers.findAndHookMethod("android.telephony.PhoneStateListener", mLpp.classLoader, "onCellInfoChanged", List.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                param.args[0] = getCell(mcc, 0, lac, cid, 0, TelephonyManager.PHONE_TYPE_GSM);
+                param.args[0] = null;//getCell(mcc, 0, lac, cid, 0, TelephonyManager.PHONE_TYPE_GSM);
                 XposedBridge.log("TOM hook PhoneStateListener onCellInfoChanged method before");
             }
         });
@@ -182,7 +182,7 @@ public class Cover implements IXposedHookLoadPackage {
         XposedHelpers.findAndHookMethod("android.telephony.PhoneStateListener", mLpp.classLoader, "onCellLocationChanged", CellLocation.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                param.args[0] = getCellLocation();
+                param.args[0] = null;//getCellLocation();
                 XposedBridge.log("TOM hook PhoneStateListener onCellLocationChanged method before");
             }
         });
