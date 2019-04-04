@@ -41,12 +41,20 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public class Cover implements IXposedHookLoadPackage {
+    String provider = LocationManager.GPS_PROVIDER;
 
-    double latitude = 30.660793;
-    double longitude = 104.081008;
-    String provider = LocationManager.NETWORK_PROVIDER;
-    int lac = 39687;
-    int cid = 163294727;
+    // 公司
+//    double latitude = 30.660793;
+//    double longitude = 104.081008;
+//    int lac = 39687;
+//    int cid = 163294727;
+//    int mcc = 460;
+
+    // 北京
+    double latitude = 39.985298;
+    double longitude = 116.32082;
+    int lac = 4566;
+    int cid = 17952525;
     int mcc = 460;
 
     private Location getLocation() {
