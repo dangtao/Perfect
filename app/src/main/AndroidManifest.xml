@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="tt.oo.mm">
 
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name">
@@ -10,10 +15,21 @@
             android:value="true" />
         <meta-data
             android:name="xposeddescription"
-            android:value="09:28" />
+            android:value="it is me" />
         <meta-data
             android:name="xposedminversion"
             android:value="53" />
+
+        <activity android:name=".LocationActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <meta-data
+            android:name="com.amap.api.v2.apikey"
+            android:value="cf79db6bb7f780c6574a0eae08c77fac" />
 
     </application>
 

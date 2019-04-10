@@ -1,5 +1,7 @@
 package tt.oo.mm;
 
+import android.app.AndroidAppHelper;
+import android.content.Context;
 import android.location.Criteria;
 import android.location.GpsStatus;
 import android.location.Location;
@@ -9,6 +11,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.telephony.CellIdentityCdma;
@@ -22,6 +25,12 @@ import android.telephony.CellInfoWcdma;
 import android.telephony.CellLocation;
 import android.telephony.gsm.GsmCellLocation;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,21 +43,112 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class Cover implements IXposedHookLoadPackage {
     String provider = LocationManager.GPS_PROVIDER;
 
-    // 公司
-//    double latitude = 30.660793;
-//    double longitude = 104.081008;
-//    int lac = 39687;
-//    int cid = 163294727;
-//    int mcc = 460;
+    String fileDirectory = Environment.getExternalStoragePublicDirectory("Xposed_Modules").getAbsolutePath();
+    String fileLatitudePath = fileDirectory + "/latitude.txt";
+    String fileLongitudePath = fileDirectory + "/longitude.txt";
+
 
     // 北京
-    double latitude = 31.7001297880;//39.985298;
-    double longitude = 110.6295618490;//116.32082;
+    double latitude = -1;
+    double longitude = -1;
+
+    // 可以不用
     int lac = 4566;
     int cid = 17952525;
     int mcc = 460;
 
-    private Location getLocation() {
+    private double readLatitudeFromFile(Context context) {
+        initDirectory();
+        return readValueFromFile(context, fileLatitudePath);
+    }
+
+    private void saveLatitudeToFile(Context context, double value) {
+        initDirectory();
+        saveValueToFile(context, value, fileLatitudePath);
+    }
+
+    private double readLongitudeFromFile(Context context) {
+        initDirectory();
+        return readValueFromFile(context, fileLongitudePath);
+    }
+
+    private void saveLongitudeToFile(Context context, double value) {
+        initDirectory();
+        saveValueToFile(context, value, fileLongitudePath);
+    }
+
+    private void initDirectory() {
+        File dir = new File(fileDirectory);
+        if (!dir.exists()) {
+            dir.mkdirs();
+            XposedBridge.log("FFFF create dir success: " + fileDirectory);
+        }
+    }
+
+    private void saveValueToFile(Context context, double value, String path) {
+
+        File file = new File(path);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+                XposedBridge.log("FFFF check file exist: " + path);
+            } catch (IOException e) {
+                e.printStackTrace();
+                XposedBridge.log("FFFF check file exist fail: " + path);
+                return;
+            }
+        }
+
+        try {
+            BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+            bw.write(value + "");
+            bw.close();
+            XposedBridge.log("FFFF write file value: " + value);
+        } catch (Exception e) {
+            e.printStackTrace();
+            XposedBridge.log("FFFF write file value: " + value + " fail");
+        }
+    }
+
+    private double readValueFromFile(Context context, String path) {
+        File file = new File(path);
+        if (!file.exists()) {
+            XposedBridge.log("FFFF read file value: fail(no such file)");
+            return -1;
+        }
+
+        StringBuilder text = new StringBuilder();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(file));
+            String line;
+
+            while ((line = br.readLine()) != null) {
+                text.append(line);
+                text.append('\n');
+            }
+            br.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            XposedBridge.log("FFFF read file value: fail");
+            return -1;
+        }
+
+        try {
+            XposedBridge.log("FFFF read file value: " + text.toString());
+            return Double.parseDouble(text.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            XposedBridge.log("FFFF read file value: " + "(can not parse to double)");
+            return -1;
+        }
+    }
+
+    private Location getLocation(Context context) {
+
+        // 更新经纬度的值
+        latitude = readLatitudeFromFile(context);
+        longitude = readLongitudeFromFile(context);
+
         Location location = new Location(provider);
         location.setAccuracy(100);
         location.setLatitude(latitude);
@@ -61,6 +161,13 @@ public class Cover implements IXposedHookLoadPackage {
         location.setTime(System.currentTimeMillis());
 
         return location;
+    }
+
+    private boolean noNeedToChangeLocation() {
+        if (readLatitudeFromFile(AndroidAppHelper.currentApplication()) == -1 && readLongitudeFromFile(AndroidAppHelper.currentApplication()) == -1) {
+            return true;
+        }
+        return false;
     }
 
     private CellLocation getCellLocation() {
@@ -95,6 +202,30 @@ public class Cover implements IXposedHookLoadPackage {
     @Override
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam mLpp) throws Throwable {
         XposedBridge.log("TOM Loaded Package Name:" + mLpp.packageName);
+
+        /**
+         * tt.oo.mm.LocationActivity
+         */
+        if (mLpp.packageName.equals("tt.oo.mm")) {
+            XposedHelpers.findAndHookMethod("tt.oo.mm.LocationActivity", mLpp.classLoader, "setCurrentPosition", double.class, double.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    latitude = (double) param.args[0];
+                    longitude = (double) param.args[1];
+
+                    XposedBridge.log("TOM hook position before:" + latitude + " " + longitude);
+
+                    // 保存经纬度的值
+                    saveLatitudeToFile(AndroidAppHelper.currentApplication(), latitude);
+                    saveLongitudeToFile(AndroidAppHelper.currentApplication(), longitude);
+                }
+
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    XposedBridge.log("TOM hook position after:" + latitude + " " + longitude);
+                }
+            });
+        }
 
         /**
          * WifiManager
@@ -239,7 +370,10 @@ public class Cover implements IXposedHookLoadPackage {
         XposedHelpers.findAndHookMethod("android.location.LocationManager", mLpp.classLoader, "getLastKnownLocation", String.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                param.setResult(getLocation());
+                if (noNeedToChangeLocation()) {
+                    return;
+                }
+                param.setResult(getLocation(AndroidAppHelper.currentApplication()));
                 XposedBridge.log("TOM hook LocationManager getLastKnownLocation method after");
             }
         });
@@ -253,7 +387,11 @@ public class Cover implements IXposedHookLoadPackage {
                 param.args[0] = new LocationListener() {
                     @Override
                     public void onLocationChanged(Location location) {
-                        originalLocationListener.onLocationChanged(getLocation());
+                        if (noNeedToChangeLocation()) {
+                            originalLocationListener.onLocationChanged(location);
+                        } else {
+                            originalLocationListener.onLocationChanged(getLocation(AndroidAppHelper.currentApplication()));
+                        }
                     }
 
                     @Override
@@ -271,7 +409,9 @@ public class Cover implements IXposedHookLoadPackage {
                     }
                 };
 
-                originalLocationListener.onLocationChanged(getLocation());
+                if (!noNeedToChangeLocation()) {
+                    originalLocationListener.onLocationChanged(getLocation(AndroidAppHelper.currentApplication()));
+                }
             }
         });
     }
